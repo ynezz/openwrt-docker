@@ -6,6 +6,7 @@ include:
   - local: .gitlab/ci/imagebuilder.yml
   - local: .gitlab/ci/sdk.yml
   - local: .gitlab/ci/rootfs.yml
+  - local: .gitlab/ci/ci-native-testing.yml
   - local: .gitlab/ci/targets.yml
   - local: .gitlab/ci/targets_rootfs.yml
   - remote: https://gitlab.com/ynezz/gitlab-evaluation/raw/wip/gitlab-ci/gitlab-ci.yml

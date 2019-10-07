@@ -1,0 +1,52 @@
+build-ci-native-testing:
+  extends: .build
+  variables:
+    IMAGE_NAME: "ci-native-testing"
+    TESTING_IMAGE: "testing/$IMAGE_NAME"
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - docker build -t "$TESTING_IMAGE" -f Dockerfile.ci-native-testing .
+    - docker tag "$TESTING_IMAGE" "$CI_REGISTRY_IMAGE/$TESTING_IMAGE:$CI_COMMIT_REF_SLUG"
+    - docker push "$CI_REGISTRY_IMAGE/$TESTING_IMAGE:$CI_COMMIT_REF_SLUG"
+
+test-ci-native-testing:
+  variables:
+    IMAGE_NAME: "ci-native-testing"
+    TESTING_IMAGE: "testing/$IMAGE_NAME"
+  image: "$CI_REGISTRY_IMAGE/$TESTING_IMAGE:$CI_COMMIT_REF_SLUG"
+  stage: test
+  script:
+    - git clone --depth 1 --branch wip --recurse-submodules
+      https://gitlab.com/ynezz/openwrt-urngd.git urngd && cd urngd
+    - wget -q https://gitlab.com/ynezz/gitlab-evaluation/raw/wip/Makefile -O Makefile.gitlab-ci
+    - make ci-prepare -f Makefile.gitlab-ci
+    - make ci-native-checks -f Makefile.gitlab-ci
+
+deploy-ci-native-testing:
+  extends: .deploy
+  variables:
+    IMAGE_NAME: "ci-native-testing"
+    TESTING_IMAGE: "testing/$IMAGE_NAME"
+    DOCKER_IMAGE: "openwrtorg/$IMAGE_NAME"
+    GITLAB_IMAGE: "$CI_REGISTRY_IMAGE/$IMAGE_NAME"
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - docker tag "$TESTING_IMAGE" "$GITLAB_IMAGE"
+    - docker tag "$TESTING_IMAGE" "$GITLAB_IMAGE:latest"
+    - docker tag "$TESTING_IMAGE" "$GITLAB_IMAGE:$CI_COMMIT_REF_SLUG"
+
+    - docker push "$GITLAB_IMAGE"
+    - docker push "$GITLAB_IMAGE:latest"
+    - docker push "$GITLAB_IMAGE:$CI_COMMIT_REF_SLUG"
+
+    - docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"
+
+    - docker tag "$TESTING_IMAGE" "$DOCKER_IMAGE"
+    - docker tag "$TESTING_IMAGE" "$DOCKER_IMAGE:latest"
+    - docker tag "$TESTING_IMAGE" "$DOCKER_IMAGE:$CI_COMMIT_REF_SLUG"
+
+    - docker push "$DOCKER_PUSH_IMAGE"
+    - docker push "$DOCKER_PUSH_IMAGE:latest"
+    - docker push "$DOCKER_PUSH_IMAGE:$CI_COMMIT_REF_SLUG"
